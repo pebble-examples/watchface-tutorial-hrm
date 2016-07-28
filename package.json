@@ -1,0 +1,47 @@
+{
+  "name": "watchface-tutorial-hrml",
+  "author": "MakeAwesomeHappen",
+  "version": "1.0.0",
+  "keywords": ["pebble-app"],
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "watchface-tutorial-hrm",
+    "uuid": "9d15a3db-bbec-4a06-afb3-e0842bf6c176",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": [
+      "aplite",
+      "basalt",
+      "chalk",
+      "diorite"
+    ],
+    "watchapp": {
+      "watchface": true
+    },
+    "messageKeys": [
+      "Conditions",
+      "Temperature"
+    ],
+
+    "resources": {
+      "media": [
+        {
+          "type": "font",
+          "name": "FONT_PERFECT_DOS_48",
+          "file": "perfect-dos-vga.ttf"
+        },
+        {
+          "type": "font",
+          "name": "FONT_PERFECT_DOS_20",
+          "file": "perfect-dos-vga.ttf"
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_BACKGROUND",
+          "file": "background.png"
+        }
+      ]
+    }
+  }
+}
