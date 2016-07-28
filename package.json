@@ -1,5 +1,5 @@
 {
-  "name": "watchface-tutorial-hrml",
+  "name": "watchface-tutorial-hrm",
   "author": "MakeAwesomeHappen",
   "version": "1.0.0",
   "keywords": ["pebble-app"],
@@ -20,10 +20,8 @@
       "watchface": true
     },
     "messageKeys": [
-      "Conditions",
-      "Temperature"
     ],
-
+    "capabilities": [ "health" ],
     "resources": {
       "media": [
         {
