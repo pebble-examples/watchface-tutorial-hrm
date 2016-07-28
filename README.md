@@ -4,7 +4,11 @@ An example of reading the Heart Rate Monitor
 
 ![Screenshot](/images/screenshot.png)
 
-Requires SDK 4.
+**NOTE:** This example requires SDK 4.
+
+**NOTE1:** This example runs the heart rate monitor at the maximum sampling rate
+(1 sample per second), and as a result will decrease the battery performance of
+your Pebble smartwatch.
 
 ## Guide
 
