@@ -29,12 +29,16 @@ static void prv_update_ui(void) {
   strftime(s_time_buffer, sizeof(s_time_buffer), clock_is_24h_style() ? "%H:%M" : "%I:%M", tick_time);
   text_layer_set_text(s_time_layer, s_time_buffer);
 
-  /** Display the Heart Rate **/
-  HealthValue hrmValue = health_service_peek_current_value(HealthMetricHeartRateBPM);
-
-  static char s_hrm_buffer[8];
-  snprintf(s_hrm_buffer, sizeof(s_hrm_buffer), "%lu BPM", (uint32_t) hrmValue);
-  text_layer_set_text(s_hrm_layer, s_hrm_buffer);
+  #if PBL_API_EXISTS(health_service_peek_current_value)
+    /** Display the Heart Rate **/
+    HealthValue value = health_service_peek_current_value(HealthMetricHeartRateBPM);
+    static char s_hrm_buffer[8];
+    snprintf(s_hrm_buffer, sizeof(s_hrm_buffer), "%lu BPM", (uint32_t) value);
+    text_layer_set_text(s_hrm_layer, s_hrm_buffer);
+    layer_set_hidden(text_layer_get_layer(s_hrm_layer), false);
+  #else
+    layer_set_hidden(text_layer_get_layer(s_hrm_layer), true);
+  #endif
 
   /** Display the Battery **/
   BatteryChargeState battery_info = battery_state_service_peek();
@@ -156,22 +160,7 @@ static void prv_main_window_unload(Window *window) {
   prv_destroy_ui();
 }
 
-static void prv_on_health_data(HealthEventType type, void *context) {
-  // If the update was from the Heart Rate Monitor, update it
-  if (type == HealthEventHeartRateUpdate) {
-    prv_update_ui();
-  }
-}
-
 static void prv_init() {
-  // Set HRM sample period
-  #if PBL_API_EXISTS(health_service_set_heart_rate_sample_period)
-  health_service_set_heart_rate_sample_period(1);
-  #endif
-
-  // Subscribe to the Heart Rate events
-  health_service_events_subscribe(prv_on_health_data, NULL);
-
   // Create main Window element and assign to pointer
   s_main_window = window_create();
   window_set_background_color(s_main_window, GColorBlack);
@@ -188,10 +177,6 @@ static void prv_init() {
 static void prv_deinit() {
   // Destroy Window
   window_destroy(s_main_window);
-
-  #if PBL_API_EXISTS(health_service_set_heart_rate_sample_period)
-  health_service_set_heart_rate_sample_period(0);
-  #endif
 }
 
 int main(void) {
