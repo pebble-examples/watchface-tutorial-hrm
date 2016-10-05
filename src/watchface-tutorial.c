@@ -1,7 +1,7 @@
 #include <pebble.h>
 
 static Window *s_main_window;
-static Layer *window_layer;
+static Layer *s_window_layer;
 static TextLayer *s_time_layer;
 static TextLayer *s_hrm_layer;
 static TextLayer *s_bat_layer;
@@ -20,7 +20,7 @@ uint8_t relative_pixel(uint8_t percent, uint8_t max) {
   return (max * percent) / 100;
 }
 
-static void update_ui(void) {
+static void prv_update_ui(void) {
   /** Display the Time **/
   time_t temp = time(NULL);
   struct tm *tick_time = localtime(&temp);
@@ -29,12 +29,16 @@ static void update_ui(void) {
   strftime(s_time_buffer, sizeof(s_time_buffer), clock_is_24h_style() ? "%H:%M" : "%I:%M", tick_time);
   text_layer_set_text(s_time_layer, s_time_buffer);
 
-  /** Display the Heart Rate **/
-  HealthValue hrmValue = health_service_peek_current_value(HealthMetricHeartRateBPM);
-
-  static char s_hrm_buffer[8];
-  snprintf(s_hrm_buffer, sizeof(s_hrm_buffer), "%lu BPM", (uint32_t) hrmValue);
-  text_layer_set_text(s_hrm_layer, s_hrm_buffer);
+  #if PBL_API_EXISTS(health_service_peek_current_value)
+    /** Display the Heart Rate **/
+    HealthValue value = health_service_peek_current_value(HealthMetricHeartRateBPM);
+    static char s_hrm_buffer[8];
+    snprintf(s_hrm_buffer, sizeof(s_hrm_buffer), "%lu BPM", (uint32_t) value);
+    text_layer_set_text(s_hrm_layer, s_hrm_buffer);
+    layer_set_hidden(text_layer_get_layer(s_hrm_layer), false);
+  #else
+    layer_set_hidden(text_layer_get_layer(s_hrm_layer), true);
+  #endif
 
   /** Display the Battery **/
   BatteryChargeState battery_info = battery_state_service_peek();
@@ -44,10 +48,10 @@ static void update_ui(void) {
   text_layer_set_text(s_bat_layer, s_bat_buffer);
 }
 
-static void update_ui_layout(void) {
+static void prv_update_ui_layout(void) {
   // Adapt the layout based on any obstructions
-  GRect full_bounds = layer_get_bounds(window_layer);
-  GRect unobstructed_bounds = layer_get_unobstructed_bounds(window_layer);
+  GRect full_bounds = layer_get_bounds(s_window_layer);
+  GRect unobstructed_bounds = layer_get_unobstructed_bounds(s_window_layer);
 
   if (!grect_equal(&full_bounds, &unobstructed_bounds)) {
     // Screen is obstructed
@@ -71,11 +75,11 @@ static void update_ui_layout(void) {
   bat_frame.origin.y = relative_pixel(s_bat_offset_top_percent, unobstructed_bounds.size.h);
   layer_set_frame(text_layer_get_layer(s_bat_layer), bat_frame);
 
-  update_ui();
+  prv_update_ui();
 }
 
-static void initialise_ui(void) {
-  GRect bounds = layer_get_bounds(window_layer);
+static void prv_initialize_ui(void) {
+  GRect bounds = layer_get_bounds(s_window_layer);
 
   // Create GBitmap
   s_background_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_BACKGROUND);
@@ -83,7 +87,7 @@ static void initialise_ui(void) {
   // Create BitmapLayer to display the GBitmap
   s_background_layer = bitmap_layer_create(bounds);
   bitmap_layer_set_bitmap(s_background_layer, s_background_bitmap);
-  layer_add_child(window_layer, bitmap_layer_get_layer(s_background_layer));
+  layer_add_child(s_window_layer, bitmap_layer_get_layer(s_background_layer));
 
   // Create time TextLayer
   s_time_layer = text_layer_create(GRect(0,
@@ -98,7 +102,7 @@ static void initialise_ui(void) {
   // Apply to TextLayer
   text_layer_set_font(s_time_layer, s_time_font);
   text_layer_set_text_alignment(s_time_layer, GTextAlignmentCenter);
-  layer_add_child(window_layer, text_layer_get_layer(s_time_layer));
+  layer_add_child(s_window_layer, text_layer_get_layer(s_time_layer));
 
   // Create second custom font, apply it and add to Window
   s_info_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_PERFECT_DOS_20));
@@ -111,7 +115,7 @@ static void initialise_ui(void) {
   text_layer_set_text_alignment(s_hrm_layer, GTextAlignmentCenter);
   text_layer_set_text(s_hrm_layer, "Loading...");
   text_layer_set_font(s_hrm_layer, s_info_font);
-  layer_add_child(window_layer, text_layer_get_layer(s_hrm_layer));
+  layer_add_child(s_window_layer, text_layer_get_layer(s_hrm_layer));
 
   // Create Battery Layer
   s_bat_layer = text_layer_create(GRect(0,
@@ -121,81 +125,62 @@ static void initialise_ui(void) {
   text_layer_set_text_alignment(s_bat_layer, GTextAlignmentCenter);
   text_layer_set_text(s_bat_layer, "__%%");
   text_layer_set_font(s_bat_layer, s_info_font);
-  layer_add_child(window_layer, text_layer_get_layer(s_bat_layer));
+  layer_add_child(s_window_layer, text_layer_get_layer(s_bat_layer));
 
   // Check for obstructions
-  update_ui();
+  prv_update_ui();
 }
 
-static void destroy_ui(void) {
+static void prv_destroy_ui(void) {
   gbitmap_destroy(s_background_bitmap);
   bitmap_layer_destroy(s_background_layer);
   text_layer_destroy(s_time_layer);
   text_layer_destroy(s_hrm_layer);
 }
 
-static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
-  update_ui();
+static void prv_tick_handler(struct tm *tick_time, TimeUnits units_changed) {
+  prv_update_ui();
 }
 
-static void main_window_load(Window *window) {
-  window_layer = window_get_root_layer(window);
+static void prv_main_window_load(Window *window) {
+  s_window_layer = window_get_root_layer(window);
 
   // Create the UI elements
-  initialise_ui();
+  prv_initialize_ui();
 
   // Make sure the time is displayed from the start
-  update_ui_layout();
+  prv_update_ui_layout();
 }
 
-static void main_window_unload(Window *window) {
+static void prv_main_window_unload(Window *window) {
   fonts_unload_custom_font(s_time_font);
   fonts_unload_custom_font(s_info_font);
 
   // Clean up the unused UI elenents
-  destroy_ui();
+  prv_destroy_ui();
 }
 
-static void prv_on_health_data(HealthEventType type, void *context) {
-  // If the update was from the Heart Rate Monitor, update it
-  if (type == HealthEventHeartRateUpdate) {
-    update_ui();
-  }
-}
-
-static void init() {
-  // Set HRM sample period
-  #if PBL_API_EXISTS(health_service_set_heart_rate_sample_period)
-  health_service_set_heart_rate_sample_period(1);
-  #endif
-
-  // Subscribe to the Heart Rate events
-  health_service_events_subscribe(prv_on_health_data, NULL);
-
+static void prv_init() {
   // Create main Window element and assign to pointer
   s_main_window = window_create();
   window_set_background_color(s_main_window, GColorBlack);
   window_set_window_handlers(s_main_window, (WindowHandlers) {
-    .load = main_window_load,
-    .unload = main_window_unload
+    .load = prv_main_window_load,
+    .unload = prv_main_window_unload
   });
   window_stack_push(s_main_window, true);
 
   // Register with TickTimerService
-  tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
+  tick_timer_service_subscribe(MINUTE_UNIT, prv_tick_handler);
 }
 
-static void deinit() {
+static void prv_deinit() {
   // Destroy Window
   window_destroy(s_main_window);
-
-  #if PBL_API_EXISTS(health_service_set_heart_rate_sample_period)
-  health_service_set_heart_rate_sample_period(0);
-  #endif
 }
 
 int main(void) {
-  init();
+  prv_init();
   app_event_loop();
-  deinit();
+  prv_deinit();
 }
