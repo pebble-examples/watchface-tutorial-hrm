@@ -78,7 +78,7 @@ static void prv_update_ui_layout(void) {
   prv_update_ui();
 }
 
-static void prv_initialise_ui(void) {
+static void prv_initialize_ui(void) {
   GRect bounds = layer_get_bounds(s_window_layer);
 
   // Create GBitmap
@@ -146,7 +146,7 @@ static void prv_main_window_load(Window *window) {
   s_window_layer = window_get_root_layer(window);
 
   // Create the UI elements
-  prv_initialise_ui();
+  prv_initialize_ui();
 
   // Make sure the time is displayed from the start
   prv_update_ui_layout();
